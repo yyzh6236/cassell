@@ -20,6 +20,38 @@ const state = Object.fromEntries(
   SOURCES.map((s) => [s.id, { on: false, value: isTicketSource(s) ? 0 : 1 }])
 );
 
+const STORAGE_KEY = "cassell.plan.v1";
+let storageAvailable = true;
+
+function restorePlan() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (!saved || saved.version !== 1 || !saved.sources || typeof saved.sources !== "object") return;
+    for (const s of SOURCES) {
+      const entry = saved.sources[s.id];
+      if (!entry || typeof entry.on !== "boolean" || !Number.isSafeInteger(entry.value) || entry.value < 0) continue;
+      state[s.id] = {
+        on: entry.on,
+        value: isTicketSource(s) ? entry.value : hasPurchaseLimit(s) ? Math.min(s.max, entry.value) : entry.value,
+      };
+    }
+  } catch { /* 损坏或不可访问的数据不影响计算 */ }
+}
+
+function savePlan() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, sources: state }));
+    storageAvailable = true;
+  } catch { storageAvailable = false; }
+  document.getElementById("save-status").textContent = storageAvailable
+    ? "已自动保存在此浏览器" : "当前浏览器无法保存，关闭页面后填写可能丢失";
+}
+
+function normalizeCount(raw) {
+  const n = Number(raw);
+  return Number.isFinite(n) ? Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(n))) : 0;
+}
+
 const elSources = document.getElementById("sources");
 const elMilestones = document.getElementById("milestones");
 const elTotalPulls = document.getElementById("total-pulls");
@@ -90,15 +122,16 @@ function setEnabled(id, on) {
 
 function setCount(id, next) {
   const src = SOURCES.find((s) => s.id === id);
-  const n = Math.max(0, Math.floor(Number(next) || 0));
+  const n = normalizeCount(next);
   state[id].value = hasPurchaseLimit(src) ? Math.min(src.max, n) : n;
   render();
 }
 
 function setTicketCount(id, raw) {
   const s = SOURCES.find((x) => x.id === id);
-  state[id].value = Math.max(0, Math.floor(Number(raw) || 0));
+  state[id].value = normalizeCount(raw);
   // 输入时不全量重绘，避免光标丢失
+  savePlan();
   updateTicketRow(s);
   renderSummary();
 }
@@ -123,11 +156,11 @@ function renderTicketRow(s) {
 
   return `
     <div class="row ssr-row ${st.on ? "" : "is-off"}" data-ticket-row="${s.id}">
-      <input type="checkbox" data-enable="${s.id}" ${st.on ? "checked" : ""} aria-label="启用 ${s.name}" />
-      <div class="name">
+      <input type="checkbox" id="enable-${s.id}" data-enable="${s.id}" ${st.on ? "checked" : ""} aria-label="启用 ${s.name}" />
+      <label class="name" for="enable-${s.id}">
         <strong>${s.name}</strong>
         <span>${ticketSubLabel(s)}</span>
-      </div>
+      </label>
       <div class="meta">
         <b data-ticket-pulls>${!st.on ? "未启用" : pulls ? `+${pulls} 抽` : "未计入"}</b>
         <span data-ticket-hint>${ticketMetaHint(s, st)}</span>
@@ -166,22 +199,22 @@ function renderSources() {
         ? `限购 ${s.max} · 已选 ${count}`
         : `不限购 · 已选 ${count}`;
 
-      const checkbox = `<input type="checkbox" data-enable="${s.id}" ${on ? "checked" : ""} aria-label="启用 ${s.name}" />`;
+      const checkbox = `<input type="checkbox" id="enable-${s.id}" data-enable="${s.id}" ${on ? "checked" : ""} aria-label="启用 ${s.name}" />`;
       const stepper = isQty
         ? `<div class="stepper">
-            <button type="button" data-action="dec" data-id="${s.id}" ${count <= 0 ? "disabled" : ""}>−</button>
+            <button type="button" aria-label="减少 ${s.name}次数" data-action="dec" data-id="${s.id}" ${count <= 0 ? "disabled" : ""}>−</button>
             <div class="count">${count}</div>
-            <button type="button" data-action="inc" data-id="${s.id}" ${atMax ? "disabled" : ""}>+</button>
+            <button type="button" aria-label="增加 ${s.name}次数" data-action="inc" data-id="${s.id}" ${atMax ? "disabled" : ""}>+</button>
           </div>`
         : `<div class="meta"><b>${money(s.cost)}</b>单次</div>`;
 
       return `
         <div class="row ${on ? "" : "is-off"}">
           ${checkbox}
-          <div class="name">
+          <label class="name" for="enable-${s.id}">
             <strong>${s.name}</strong>
             <span>${limitHint(s)}</span>
-          </div>
+          </label>
           <div class="meta">
             <b>${on ? `+${appliedPulls} 抽` : `每次 ${s.pulls} 抽`}</b>
             ${on ? (isQty ? qtyHint : money(s.cost)) : "勾选后计入"}
@@ -212,6 +245,8 @@ function renderSummary() {
   elTotalPulls.textContent = pulls.toLocaleString("zh-CN");
   elTotalCost.textContent = money(cost);
   elUnitPrice.textContent = unitPriceText(cost, pulls);
+  document.getElementById("mobile-pulls").textContent = pulls.toLocaleString("zh-CN");
+  document.getElementById("mobile-cost").textContent = money(cost);
 
   const sorted = [...MILESTONES].sort((a, b) => a.pulls - b.pulls);
   elMilestones.innerHTML = sorted.map((m) => {
@@ -226,13 +261,13 @@ function renderSummary() {
         <div class="badge">${hit ? "已达成" : "未达成"}</div>
       </div>
     `;
-  }).join("") || `<div class="gap-note">暂无累计奖励配置</div>`;
+  }).join("") || `<div class="gap-note">暂无累计奖励</div>`;
 
   const next = sorted.find((m) => pulls < m.pulls);
   if (!sorted.length) {
-    elGapNote.textContent = "奖励表为空，可在 MILESTONES 中补充。";
+    elGapNote.textContent = "暂无累计奖励信息。";
   } else if (!next) {
-    elGapNote.innerHTML = `当前方案已覆盖全部已配置奖励（最高 <b>${sorted[sorted.length - 1].pulls}</b> 抽）。`;
+    elGapNote.innerHTML = `当前方案已覆盖全部累计奖励（最高 <b>${sorted[sorted.length - 1].pulls}</b> 抽）。`;
   } else {
     elGapNote.innerHTML = `距离下一档「${next.reward}」还差 <b>${next.pulls - pulls}</b> 抽。`;
   }
@@ -247,6 +282,7 @@ function render() {
 
   renderSources();
   renderSummary();
+  savePlan();
 
   if (keepId) {
     const input = elSources.querySelector(`[data-ticket-input][data-id="${keepId}"]`);
@@ -325,5 +361,6 @@ function renderCultivateRewards() {
 DEFAULT_ENABLED.forEach((id) => {
   if (state[id]) state[id].on = true;
 });
+restorePlan();
 renderCultivateRewards();
 render();

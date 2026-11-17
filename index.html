@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>UR · 氪金抽数计算器</title>
   <meta name="description" content="UR 通用氪金抽数计算器：勾选来源、调节礼包次数，实时估算总抽数与花费。" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -15,9 +15,10 @@
     <header>
       <div class="eyebrow">UR · General Plan</div>
       <h1>氪金抽数计算器</h1>
-      <p>勾选免费来源，调节礼包购买次数，实时看总抽数与总花费。累计奖励表可继续补充。</p>
+      <p>勾选免费来源，调节礼包购买次数，实时看总抽数与总花费。轻松规划你的抽卡方案。</p>
     </header>
 
+    <p class="save-status" id="save-status" role="status"></p>
     <div class="layout">
       <section class="panel">
         <div class="panel-head">
@@ -33,7 +34,7 @@
         <div id="sources"></div>
       </section>
 
-      <aside class="summary">
+      <aside class="summary" id="summary">
         <section class="panel">
           <div class="panel-head">
             <h2>方案合计</h2>
@@ -74,16 +75,19 @@
             </thead>
             <tbody id="cultivate-rewards"></tbody>
           </table>
-          <div class="ref-foot">缺失奖励标「？」；维护 <code>CULTIVATE_REWARDS</code> 补充。</div>
+          <div class="ref-foot">「？」表示奖励暂未确认。</div>
         </section>
       </aside>
     </div>
 
-    <footer class="note">
-      配置维护：<code>assets/js/config.js</code> 中的 <code>SOURCES</code>、<code>MILESTONES</code>、<code>CULTIVATE_REWARDS</code>。
-    </footer>
+
   </div>
 
+  <a class="mobile-summary" href="#summary" aria-label="查看方案合计与累计奖励">
+    <span>总计 <strong id="mobile-pulls">0</strong> 抽</span>
+    <span id="mobile-cost">¥0</span>
+    <span class="mobile-details">查看合计 ↑</span>
+  </a>
   <script src="assets/js/config.js"></script>
   <script src="assets/js/app.js"></script>
 </body>
