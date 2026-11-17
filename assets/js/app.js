@@ -245,8 +245,6 @@ function renderSummary() {
   elTotalPulls.textContent = pulls.toLocaleString("zh-CN");
   elTotalCost.textContent = money(cost);
   elUnitPrice.textContent = unitPriceText(cost, pulls);
-  document.getElementById("mobile-pulls").textContent = pulls.toLocaleString("zh-CN");
-  document.getElementById("mobile-cost").textContent = money(cost);
 
   const sorted = [...MILESTONES].sort((a, b) => a.pulls - b.pulls);
   elMilestones.innerHTML = sorted.map((m) => {
