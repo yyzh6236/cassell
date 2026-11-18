@@ -7,6 +7,7 @@ const read = (file) => fs.readFileSync(path.join(__dirname, "..", file), "utf8")
 const html = read("index.html");
 const elements = new Map([...html.matchAll(/id="([^"]+)"/g)].map(([, id]) => [id, {
   innerHTML: "", textContent: "", listeners: {}, attributes: {},
+  classList: { toggle() {} },
   addEventListener(type, listener) { this.listeners[type] = listener; },
   setAttribute(name, value) { this.attributes[name] = value; },
   getAttribute(name) { return this.attributes[name]; },
@@ -86,6 +87,12 @@ for (const pulls of [0, ...expected.flatMap(([n]) => [n - 1, n]), 701]) {
 assert.equal(document.getElementById("gap-note").textContent, "当前方案已达成专武奖励。");
 
 const history = document.getElementById("u");
+const historyEnabled = document.getElementById("enable-u");
+const toggleHistory = (enabled) => {
+  historyEnabled.checked = enabled;
+  historyEnabled.listeners.change();
+};
+assert.equal(historyEnabled.checked, true);
 const setHistory = (value) => {
   history.value = value;
   history.listeners.input();
@@ -93,11 +100,26 @@ const setHistory = (value) => {
 const click = (id) => { document.activeElement = null; document.getElementById(id).listeners.click(); };
 assert.ok(html.indexOf('id="u"') < html.indexOf('id="sources"'));
 click("btn-reset");
+toggleHistory(true);
 setHistory("400");
 run("setEnabled('urStock', true); setTicketCount('urStock', 200); setEnabled('checkin88', true);");
 assert.equal(run("calc().pulls"), 650);
 assert.equal(document.getElementById("pulls-breakdown").textContent, "已抽 400 + 计划 250");
 assert.equal(document.getElementById("unit-price").textContent, "¥0.35");
+toggleHistory(false);
+assert.equal(run("calc().pulls"), 250);
+assert.equal(history.value, "400");
+assert.equal(document.getElementById("pulls-breakdown").textContent, "已抽 0 + 计划 250");
+assert.equal(document.getElementById("unit-price").textContent, "¥0.35");
+assert.equal(document.getElementById("milestones").innerHTML.includes('class="milestone hit"'), false);
+assert.equal(document.getElementById("mobile-pulls").textContent, "250");
+run("alreadyPullsEnabled = true; restorePlan(); renderSummary();");
+assert.equal(historyEnabled.checked, false);
+assert.equal(run("alreadyPulls"), 400);
+assert.equal(run("calc().pulls"), 250);
+toggleHistory(true);
+assert.equal(run("calc().pulls"), 650);
+assert.equal(document.getElementById("milestones").innerHTML.includes('class="milestone hit"'), true);
 click("btn-clear-free");
 click("btn-clear-paid");
 assert.equal(run("calc().pulls"), 400);
@@ -136,6 +158,7 @@ run("alreadyPulls = 0; restorePlan();");
 assert.equal(run("state.diamond.value"), 50);
 assert.equal(run("state.checkin0.value"), 0);
 assert.equal(run("state.urStock.value"), 123);
+assert.equal(run("alreadyPullsEnabled"), true);
 setHistory("-10");
 assert.equal(run("alreadyPulls"), 0);
 setHistory("12.9");
@@ -146,4 +169,6 @@ assert.equal(history.value, "");
 assert.equal(run("state.diamond.value"), 50);
 assert.equal(run("state.checkin0.value"), 0);
 assert.equal(JSON.parse(storage.get("cassell.plan.v1")).alreadyPulls, 0);
+assert.equal(historyEnabled.checked, false);
+assert.equal(JSON.parse(storage.get("cassell.plan.v1")).alreadyPullsEnabled, false);
 console.log("通过：奖励及专武高亮、标签切换、已抽进度、签到剩余抽数、钻石兑换、自动保存与旧方案兼容。");

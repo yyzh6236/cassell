@@ -33,12 +33,13 @@
         </div>
         <section class="history-section" aria-labelledby="history-title">
           <h3 class="section-title" id="history-title">卡池进度</h3>
-          <div class="row history-row">
-            <label class="name" for="u">
+          <div class="row history-row" id="history-row">
+            <input type="checkbox" id="enable-u" checked aria-label="启用已抽抽数" />
+            <label class="name" for="enable-u">
               <strong>已抽抽数</strong>
-              <span>已在卡池抽过的次数，计入累抽进度</span>
+              <span>已在卡池抽过的次数，勾选后计入累抽进度</span>
             </label>
-            <input class="ticket-input" id="u" type="number" min="0" step="1" inputmode="numeric" placeholder="已抽抽数" />
+            <input class="ticket-input" id="u" type="number" min="0" step="1" inputmode="numeric" placeholder="已抽抽数" aria-label="已抽抽数" />
           </div>
         </section>
         <div id="sources"></div>

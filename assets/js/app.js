@@ -20,6 +20,7 @@ const state = Object.fromEntries(
   SOURCES.map((s) => [s.id, { on: false, value: s.defaultValue ?? (isInputSource(s) ? 0 : 1) }])
 );
 let alreadyPulls = 0;
+let alreadyPullsEnabled = true;
 
 const STORAGE_KEY = "cassell.plan.v1";
 let storageAvailable = true;
@@ -29,6 +30,7 @@ function restorePlan() {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (!saved || ![1, 2].includes(saved.version) || !saved.sources || typeof saved.sources !== "object") return;
     if (Number.isSafeInteger(saved.alreadyPulls) && saved.alreadyPulls >= 0) alreadyPulls = saved.alreadyPulls;
+    alreadyPullsEnabled = typeof saved.alreadyPullsEnabled === "boolean" ? saved.alreadyPullsEnabled : true;
     for (const s of SOURCES) {
       const entry = saved.sources[s.id];
       if (!entry || typeof entry.on !== "boolean" || !Number.isSafeInteger(entry.value) || entry.value < 0) continue;
@@ -43,7 +45,7 @@ function restorePlan() {
 
 function savePlan() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 2, alreadyPulls, sources: state }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 2, alreadyPulls, alreadyPullsEnabled, sources: state }));
     storageAvailable = true;
   } catch { storageAvailable = false; }
   document.getElementById("save-status").textContent = storageAvailable
@@ -63,6 +65,7 @@ function normalizeSourceCount(s, raw) {
 }
 
 const elAlreadyPulls = document.getElementById("u");
+const elAlreadyEnabled = document.getElementById("enable-u");
 const elSources = document.getElementById("sources");
 const elMilestones = document.getElementById("milestones");
 const elTotalPulls = document.getElementById("total-pulls");
@@ -256,7 +259,7 @@ function renderSources() {
 }
 
 function calc() {
-  let pulls = alreadyPulls;
+  let pulls = alreadyPullsEnabled ? alreadyPulls : 0;
   let cost = 0;
   for (const s of SOURCES) {
     pulls += sourcePulls(s);
@@ -267,10 +270,13 @@ function calc() {
 
 function renderSummary() {
   const { pulls, cost } = calc();
+  const appliedAlready = alreadyPullsEnabled ? alreadyPulls : 0;
+  elAlreadyEnabled.checked = alreadyPullsEnabled;
+  document.getElementById("history-row").classList.toggle("is-off", !alreadyPullsEnabled);
   elTotalPulls.textContent = pulls.toLocaleString("zh-CN");
   elTotalCost.textContent = money(cost);
-  elUnitPrice.textContent = unitPriceText(cost, pulls - alreadyPulls);
-  document.getElementById("pulls-breakdown").textContent = `已抽 ${alreadyPulls.toLocaleString("zh-CN")} + 计划 ${(pulls - alreadyPulls).toLocaleString("zh-CN")}`;
+  elUnitPrice.textContent = unitPriceText(cost, pulls - appliedAlready);
+  document.getElementById("pulls-breakdown").textContent = `已抽 ${appliedAlready.toLocaleString("zh-CN")} + 计划 ${(pulls - appliedAlready).toLocaleString("zh-CN")}`;
   document.getElementById("mobile-pulls").textContent = pulls.toLocaleString("zh-CN");
   document.getElementById("mobile-cost").textContent = money(cost);
 
@@ -319,6 +325,12 @@ function render() {
     }
   }
 }
+
+elAlreadyEnabled.addEventListener("change", () => {
+  alreadyPullsEnabled = elAlreadyEnabled.checked;
+  savePlan();
+  renderSummary();
+});
 
 elAlreadyPulls.addEventListener("input", () => {
   alreadyPulls = normalizeCount(elAlreadyPulls.value);
@@ -370,6 +382,7 @@ document.getElementById("btn-clear-paid").addEventListener("click", () => {
 
 document.getElementById("btn-reset").addEventListener("click", () => {
   alreadyPulls = 0;
+  alreadyPullsEnabled = false;
   elAlreadyPulls.value = "";
   SOURCES.forEach((s) => {
     state[s.id].on = false;

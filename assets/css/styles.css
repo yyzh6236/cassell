@@ -145,7 +145,7 @@
     .row:hover { background: rgba(15, 118, 110, 0.04); }
 
     .history-section .section-title { margin: 0; }
-    .history-row { grid-template-columns: minmax(0, 1fr) auto; }
+    .history-row { grid-template-columns: 28px minmax(0, 1fr) auto; }
     .stat-note { display: block; margin-top: 6px; font-size: 12px; color: var(--muted); }
 
     .row.is-off .name,
