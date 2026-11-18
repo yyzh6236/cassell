@@ -1,5 +1,5 @@
 {
-  const { acquisition, steps, shardsPerVisit, visitsPerDay } = UR_CULTIVATION_CONFIG;
+  const { acquisition, steps, shardsPerCopy, shardsPerVisit, visitsPerDay } = UR_CULTIVATION_CONFIG;
   const levels = [acquisition.to, ...steps.map((step) => step.to)];
   const storageKey = "cassell.cultivation.v1";
   const materials = [
@@ -49,6 +49,13 @@
     return `碎片拜访 ${visits} 次（${days} 天${lastDay}）`;
   }
 
+  function shardEquivalent(shards) {
+    const copies = Math.floor(shards / shardsPerCopy);
+    if (!copies) return "";
+    const remainder = shards % shardsPerCopy;
+    return `（${copies.toLocaleString("zh-CN")} 只本体${remainder ? ` + ${remainder} 碎片` : ""}）`;
+  }
+
   function renderCultivation() {
     const current = Number(currentSelect.value);
     const owned = inventoryInputs.map((input) => normalizeCount(input.value));
@@ -64,9 +71,12 @@
         totals[i] += step[key];
         return Math.max(0, totals[i] - owned[i]);
       });
-      const missing = materials.flatMap(({ name }, i) =>
-        gaps[i] ? [`${gaps[i].toLocaleString("zh-CN")} ${name}`] : []
-      );
+      const missing = materials.flatMap(({ key, name }, i) => {
+        const gap = gaps[i];
+        if (!gap) return [];
+        const equivalent = key === "shards" ? shardEquivalent(gap) : "";
+        return [`${gap.toLocaleString("zh-CN")} ${name}${equivalent}`];
+      });
       rows.push(`
         <li class="growth-step${missing.length ? "" : " is-ready"}">
           <strong>${step.to}</strong>

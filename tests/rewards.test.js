@@ -199,7 +199,7 @@ const growthStep = (level) => {
 };
 assert.ok(!elements.has("growth-target"));
 assert.match(growthStep("觉0"), /aria-current="step"/);
-assert.match(growthStep("超5"), /缺 3,300 碎片、14 觉醒石、19 超限石/);
+assert.match(growthStep("超5"), /缺 3,300 碎片（33 只本体）、14 觉醒石、19 超限石/);
 
 setGrowth("current", 4);
 setGrowth("shards", 684, "input");
@@ -210,7 +210,7 @@ assert.doesNotMatch(roadmap.innerHTML, /<strong>觉3<\/strong>/);
 assert.match(growthStep("觉5"), /缺 3 觉醒石[\s\S]*?无需拜访/);
 assert.match(growthStep("超1"), /缺 16 碎片、3 觉醒石、1 超限石/);
 assert.match(growthStep("超1"), /碎片拜访 4 次（2 天，最后一天 1 次）/);
-assert.match(growthStep("超5"), /缺 1,616 碎片、3 觉醒石、17 超限石/);
+assert.match(growthStep("超5"), /缺 1,616 碎片（16 只本体 \+ 16 碎片）、3 觉醒石、17 超限石/);
 
 for (const [shards, expected] of [
   [694, "碎片拜访 2 次（1 天）"],
@@ -225,7 +225,7 @@ setGrowth("awakening", 4, "input");
 setGrowth("transcend", 3, "input");
 assert.match(growthStep("觉5"), /is-ready[\s\S]*?材料已备齐/);
 assert.match(growthStep("超1"), /is-ready[\s\S]*?材料已备齐/);
-assert.match(growthStep("超2"), /缺 300 碎片、3 超限石/);
+assert.match(growthStep("超2"), /缺 300 碎片（3 只本体）、3 超限石/);
 
 calculatorTabs[1].listeners.keydown({ key: "ArrowLeft", preventDefault() {} });
 assert.equal(el("calculator-pulls").hidden, false);
