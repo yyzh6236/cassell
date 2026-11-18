@@ -191,36 +191,41 @@ calculatorTabs[1].listeners.click();
 assert.equal(el("calculator-pulls").hidden, true);
 assert.equal(el("mobile-summary").hidden, true);
 assert.equal(el("calculator-growth").hidden, false);
-assert.equal(el("growth-route").textContent, "觉0 → 超5");
-assert.match(el("growth-result").innerHTML, /缺 3,300/);
+const roadmap = el("growth-roadmap");
+const growthStep = (level) => {
+  const row = roadmap.innerHTML.split("</li>").find((segment) => segment.includes(`<strong>${level}</strong>`));
+  assert.ok(row, `升级进度中缺少 ${level}`);
+  return row;
+};
+assert.ok(!elements.has("growth-target"));
+assert.match(growthStep("觉0"), /aria-current="step"/);
+assert.match(growthStep("超5"), /缺 3,300 碎片、14 觉醒石、19 超限石/);
 
 setGrowth("current", 4);
-setGrowth("target", 6);
 setGrowth("shards", 684, "input");
 setGrowth("awakening", 1, "input");
 setGrowth("transcend", 2, "input");
-assert.equal(el("growth-route").textContent, "觉4 → 超1");
-assert.match(el("growth-result").innerHTML, /缺 16/);
-assert.match(el("growth-result").innerHTML, /缺 3/);
-assert.match(el("growth-result").innerHTML, /缺 1/);
-assert.match(el("growth-result").innerHTML, /value="684" max="700"/);
-assert.equal(el("growth-outcome").textContent, "碎片拜访 4 次（2 天，最后一天 1 次）。");
-assert.match(el("growth-roadmap").innerHTML, /觉5[\s\S]*?无需拜访/);
-assert.match(el("growth-roadmap").innerHTML, /class="growth-milestone is-target"[\s\S]*?<h3>超1<\/h3>/);
-assert.match(el("growth-roadmap").innerHTML, /<h3>超5<\/h3>/);
+assert.match(growthStep("觉4"), /aria-current="step"/);
+assert.doesNotMatch(roadmap.innerHTML, /<strong>觉3<\/strong>/);
+assert.match(growthStep("觉5"), /缺 3 觉醒石[\s\S]*?无需拜访/);
+assert.match(growthStep("超1"), /缺 16 碎片、3 觉醒石、1 超限石/);
+assert.match(growthStep("超1"), /碎片拜访 4 次（2 天，最后一天 1 次）/);
+assert.match(growthStep("超5"), /缺 1,616 碎片、3 觉醒石、17 超限石/);
 
 for (const [shards, expected] of [
-  [694, "碎片拜访 2 次（1 天）。"],
-  [695, "碎片拜访 1 次（1 天）。"],
-  [685, "碎片拜访 3 次（1 天）。"],
-  [700, "无需拜访。"],
+  [694, "碎片拜访 2 次（1 天）"],
+  [695, "碎片拜访 1 次（1 天）"],
+  [685, "碎片拜访 3 次（1 天）"],
+  [700, "无需拜访"],
 ]) {
   setGrowth("shards", shards, "input");
-  assert.equal(el("growth-outcome").textContent, expected);
+  assert.ok(growthStep("超1").includes(expected));
 }
 setGrowth("awakening", 4, "input");
 setGrowth("transcend", 3, "input");
-assert.equal(el("growth-outcome").textContent, "材料已备齐，无需拜访。");
+assert.match(growthStep("觉5"), /is-ready[\s\S]*?材料已备齐/);
+assert.match(growthStep("超1"), /is-ready[\s\S]*?材料已备齐/);
+assert.match(growthStep("超2"), /缺 300 碎片、3 超限石/);
 
 calculatorTabs[1].listeners.keydown({ key: "ArrowLeft", preventDefault() {} });
 assert.equal(el("calculator-pulls").hidden, false);
@@ -233,20 +238,19 @@ assert.equal(el("growth-shards").value, "700");
 const cultivationKey = "cassell.cultivation.v1";
 const savedGrowth = storage.get(cultivationKey);
 assert.deepEqual(JSON.parse(savedGrowth), {
-  current: 4, target: 6, inventory: { shards: 700, awakeningStones: 4, transcendStones: 3 },
+  current: 4, inventory: { shards: 700, awakeningStones: 4, transcendStones: 3 },
 });
 click("btn-reset");
 assert.equal(storage.get(cultivationKey), savedGrowth);
-for (const id of ["current", "target", "shards", "awakening", "transcend"]) el(`growth-${id}`).value = "";
+storage.set(cultivationKey, JSON.stringify({ ...JSON.parse(savedGrowth), target: 5 }));
+for (const id of ["current", "shards", "awakening", "transcend"]) el(`growth-${id}`).value = "";
 run(read("assets/js/cultivation.js"));
-assert.equal(el("growth-route").textContent, "觉4 → 超1");
+assert.match(growthStep("觉4"), /aria-current="step"/);
 assert.deepEqual(["shards", "awakening", "transcend"].map(id => el(`growth-${id}`).value), ["700", "4", "3"]);
-assert.equal(el("growth-outcome").textContent, "材料已备齐，无需拜访。");
+assert.match(growthStep("超1"), /材料已备齐/);
 setGrowth("shards", "", "input");
 assert.equal(JSON.parse(storage.get(cultivationKey)).inventory.shards, null);
 setGrowth("current", 10);
-assert.equal(el("growth-target").value, "10");
-assert.equal(el("growth-route").textContent, "超5 → 超5");
-assert.equal(el("growth-outcome").textContent, "当前已是目标等级。");
-assert.match(el("growth-roadmap").innerHTML, /最高等级/);
-console.log("通过：计算器切换、跨觉醒与超限的累计缺口、后续等级进度、拜访次数与天数、最高等级、养成输入独立保存与恢复。");
+assert.equal((roadmap.innerHTML.match(/<li /g) || []).length, 1);
+assert.match(growthStep("超5"), /当前已是最高等级/);
+console.log("通过：计算器切换、各级累计缺口、进度状态、拜访次数与天数、最高等级、旧养成输入恢复。");

@@ -12,15 +12,13 @@
 </head>
 <body>
   <div class="wrap">
-    <header>
-      <div class="eyebrow">UR · General Plan</div>
+    <header class="calculator-header">
       <h1>UR 规划计算器</h1>
+      <div class="calculator-tabs" id="calculator-tabs" role="tablist" aria-label="计算器类型">
+        <button type="button" id="tab-pulls" role="tab" aria-selected="true" aria-controls="calculator-pulls">抽数计算器</button>
+        <button type="button" id="tab-growth" role="tab" aria-selected="false" aria-controls="calculator-growth" tabindex="-1">UR养成</button>
+      </div>
     </header>
-
-    <div class="calculator-tabs" id="calculator-tabs" role="tablist" aria-label="计算器类型">
-      <button type="button" id="tab-pulls" role="tab" aria-selected="true" aria-controls="calculator-pulls">抽数计算器</button>
-      <button type="button" id="tab-growth" role="tab" aria-selected="false" aria-controls="calculator-growth" tabindex="-1">UR养成</button>
-    </div>
     <div id="calculator-pulls" role="tabpanel" aria-labelledby="tab-pulls" tabindex="0">
       <p class="save-status" id="save-status" role="status"></p>
       <div class="layout">
@@ -117,33 +115,18 @@
     </div>
 
     <div id="calculator-growth" role="tabpanel" aria-labelledby="tab-growth" tabindex="0" hidden>
-      <div class="growth-layout">
-        <section class="panel" aria-labelledby="growth-input-title">
-          <div class="panel-head"><h2 id="growth-input-title">养成计划</h2></div>
-          <div class="growth-form" id="growth-form">
-            <div class="growth-levels">
-              <label for="growth-current">当前等级<select id="growth-current"></select></label>
-              <span class="level-arrow" aria-hidden="true">→</span>
-              <label for="growth-target">目标等级<select id="growth-target"></select></label>
-            </div>
-            <div class="growth-inventory">
-              <label for="growth-shards">已有角色碎片<input id="growth-shards" type="number" min="0" step="1" inputmode="numeric" placeholder="0" /></label>
-              <label for="growth-awakening">已有觉醒石<input id="growth-awakening" type="number" min="0" step="1" inputmode="numeric" placeholder="0" /></label>
-              <label for="growth-transcend">已有超限石<input id="growth-transcend" type="number" min="0" step="1" inputmode="numeric" placeholder="0" /></label>
-            </div>
-            <p class="growth-help">拜访每次获得5碎片，每天最多3次。拜访只补充碎片，觉醒石和超限石需另行获取。</p>
+      <section class="panel growth-panel" aria-labelledby="growth-title">
+        <div class="growth-form">
+          <label for="growth-current">当前等级<select id="growth-current"></select></label>
+          <div class="growth-inventory">
+            <label for="growth-shards">已有碎片<input id="growth-shards" type="number" min="0" step="1" inputmode="numeric" placeholder="0" /></label>
+            <label for="growth-awakening">已有觉醒石<input id="growth-awakening" type="number" min="0" step="1" inputmode="numeric" placeholder="0" /></label>
+            <label for="growth-transcend">已有超限石<input id="growth-transcend" type="number" min="0" step="1" inputmode="numeric" placeholder="0" /></label>
           </div>
-        </section>
-        <section class="panel" aria-labelledby="growth-result-title">
-          <div class="panel-head"><h2 id="growth-result-title">目标材料进度</h2><span class="hint" id="growth-route"></span></div>
-          <div class="growth-result" id="growth-result"></div>
-          <p class="growth-outcome" id="growth-outcome" aria-live="polite" aria-atomic="true"></p>
-        </section>
-      </div>
-      <section class="panel growth-roadmap-panel" aria-labelledby="growth-roadmap-title">
-        <div class="panel-head"><h2 id="growth-roadmap-title">后续升级路线</h2></div>
-        <p class="growth-roadmap-help">每个等级的缺口和拜访次数都从当前等级累计计算。材料按背包现有数量抵扣。</p>
-        <ol class="growth-roadmap" id="growth-roadmap"></ol>
+        </div>
+        <h2 id="growth-title">升级进度</h2>
+        <p class="growth-help">从当前等级累计计算。拜访每次 5 碎片，每天最多 3 次。</p>
+        <ol class="growth-roadmap" id="growth-roadmap" role="list"></ol>
       </section>
     </div>
   </div>
