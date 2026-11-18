@@ -15,7 +15,7 @@
     <header>
       <div class="eyebrow">UR · General Plan</div>
       <h1>氪金抽数计算器</h1>
-      <p>勾选免费来源，调节礼包购买次数，实时看总抽数与总花费。轻松规划你的抽卡方案。</p>
+      <p>填写已抽进度，勾选免费来源，调节礼包购买次数，实时看总抽数与总花费。轻松规划你的抽卡方案。</p>
     </header>
 
     <p class="save-status" id="save-status" role="status"></p>
@@ -31,6 +31,16 @@
           <button type="button" id="btn-clear-paid" class="ghost">清空礼包</button>
           <button type="button" id="btn-reset" class="ghost">全部重置</button>
         </div>
+        <section class="history-section" aria-labelledby="history-title">
+          <h3 class="section-title" id="history-title">卡池进度</h3>
+          <div class="row history-row">
+            <label class="name" for="u">
+              <strong>已抽抽数</strong>
+              <span>已在卡池抽过的次数，计入累抽进度</span>
+            </label>
+            <input class="ticket-input" id="u" type="number" min="0" step="1" inputmode="numeric" placeholder="已抽抽数" />
+          </div>
+        </section>
         <div id="sources"></div>
       </section>
 
@@ -44,13 +54,14 @@
             <div class="stat wide">
               <label>总计抽数</label>
               <strong id="total-pulls">0</strong>
+              <span class="stat-note" id="pulls-breakdown"></span>
             </div>
             <div class="stat">
               <label>总计花费</label>
               <strong id="total-cost">¥0</strong>
             </div>
             <div class="stat">
-              <label>单抽均价</label>
+              <label>计划单抽均价</label>
               <strong id="unit-price">—</strong>
             </div>
           </div>

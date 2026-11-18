@@ -2,17 +2,23 @@
  * ===== 可维护配置 =====
  * SOURCES: 抽数来源。max = 限购次数（免费途径为 1；null = 不限购）
  * tickets: kind="tickets"，填券数；ticketRatio 张券 = 1 抽；maxPulls 可选上限
+ * pulls: kind="pulls"，直接填兑换抽数；defaultValue 默认全换；diamondsPerPull 每抽钻石
+ * checkin: kind="checkin"，填已签到天数；totalDays 总天数，pullsPerDay 每日抽数
  * MILESTONES: 开头单独展示的重要奖励（专武）
  * CULTIVATE_REWARDS: 培养星级奖励参考表（不参与抽数合计）
  * SHOP_REWARDS: 累抽商店奖励表（按方案抽数显示达成状态，不参与抽数合计）
  */
 const SOURCES = [
-  { id: "diamond", name: "25000钻石兑换", cost: 0, pulls: 50, max: 1, group: "free" },
+  {
+    id: "diamond", name: "钻石兑换", cost: 0, group: "free", kind: "pulls",
+    defaultValue: 50, maxPulls: 50, diamondsPerPull: 500, unit: "抽",
+    hint: "每抽500钻石 · 最多50抽（25000钻石）",
+  },
   { id: "awaken2", name: "觉2奖励", cost: 0, pulls: 20, max: 1, group: "free" },
   { id: "awaken3", name: "觉3奖励", cost: 0, pulls: 30, max: 1, group: "free" },
   { id: "super3", name: "超3奖励", cost: 0, pulls: 40, max: 1, group: "free" },
   { id: "story", name: "剧情奖励", cost: 0, pulls: 3, max: 1, group: "free" },
-  { id: "checkin0", name: "0元签到", cost: 0, pulls: 7, max: 1, group: "free" },
+  { id: "checkin0", name: "0元签到", cost: 0, group: "free", kind: "checkin", totalDays: 7, pullsPerDay: 1, defaultValue: 0, unit: "天", hint: "7天签到 · 每天1抽" },
   {
     id: "urStock",
     name: "已囤UR券",

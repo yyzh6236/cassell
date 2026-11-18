@@ -1,5 +1,5 @@
-function isTicketSource(s) {
-  return s.kind === "tickets";
+function isInputSource(s) {
+  return s.kind === "tickets" || s.kind === "pulls" || s.kind === "checkin";
 }
 
 function hasPurchaseLimit(s) {
@@ -15,10 +15,11 @@ function limitHint(s) {
   return money(s.cost) + " / 次 · " + (hasPurchaseLimit(s) ? "限购 " + s.max : "不限购");
 }
 
-// on = 是否计入方案；value = 礼包次数 / 券数量（普通项默认 1）
+// on = 是否计入方案；value = 礼包次数 / 券数量 / 兑换抽数 / 已签到天数
 const state = Object.fromEntries(
-  SOURCES.map((s) => [s.id, { on: false, value: isTicketSource(s) ? 0 : 1 }])
+  SOURCES.map((s) => [s.id, { on: false, value: s.defaultValue ?? (isInputSource(s) ? 0 : 1) }])
 );
+let alreadyPulls = 0;
 
 const STORAGE_KEY = "cassell.plan.v1";
 let storageAvailable = true;
@@ -26,13 +27,15 @@ let storageAvailable = true;
 function restorePlan() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (!saved || saved.version !== 1 || !saved.sources || typeof saved.sources !== "object") return;
+    if (!saved || ![1, 2].includes(saved.version) || !saved.sources || typeof saved.sources !== "object") return;
+    if (Number.isSafeInteger(saved.alreadyPulls) && saved.alreadyPulls >= 0) alreadyPulls = saved.alreadyPulls;
     for (const s of SOURCES) {
       const entry = saved.sources[s.id];
       if (!entry || typeof entry.on !== "boolean" || !Number.isSafeInteger(entry.value) || entry.value < 0) continue;
       state[s.id] = {
         on: entry.on,
-        value: isTicketSource(s) ? entry.value : hasPurchaseLimit(s) ? Math.min(s.max, entry.value) : entry.value,
+        value: saved.version === 1 && ["pulls", "checkin"].includes(s.kind)
+          ? s.defaultValue : normalizeSourceCount(s, entry.value),
       };
     }
   } catch { /* 损坏或不可访问的数据不影响计算 */ }
@@ -40,7 +43,7 @@ function restorePlan() {
 
 function savePlan() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, sources: state }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 2, alreadyPulls, sources: state }));
     storageAvailable = true;
   } catch { storageAvailable = false; }
   document.getElementById("save-status").textContent = storageAvailable
@@ -52,6 +55,14 @@ function normalizeCount(raw) {
   return Number.isFinite(n) ? Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(n))) : 0;
 }
 
+function normalizeSourceCount(s, raw) {
+  const count = normalizeCount(raw);
+  if (s.kind === "checkin") return Math.min(s.totalDays, count);
+  if (s.kind === "pulls" && hasTicketCap(s)) return Math.min(s.maxPulls, count);
+  return hasPurchaseLimit(s) ? Math.min(s.max, count) : count;
+}
+
+const elAlreadyPulls = document.getElementById("u");
 const elSources = document.getElementById("sources");
 const elMilestones = document.getElementById("milestones");
 const elTotalPulls = document.getElementById("total-pulls");
@@ -73,12 +84,13 @@ function hasTicketCap(s) {
 }
 
 function ticketEffectivePulls(s, tickets) {
-  const raw = Math.floor(Math.max(0, tickets) / s.ticketRatio);
+  if (s.kind === "checkin") return Math.max(0, s.totalDays - normalizeCount(tickets)) * s.pullsPerDay;
+  const raw = Math.floor(Math.max(0, tickets) / (s.ticketRatio || 1));
   return hasTicketCap(s) ? Math.min(raw, s.maxPulls) : raw;
 }
 
 function ticketAtCap(s, tickets) {
-  return hasTicketCap(s) && Math.floor(Math.max(0, tickets) / s.ticketRatio) >= s.maxPulls;
+  return hasTicketCap(s) && ticketEffectivePulls(s, tickets) >= s.maxPulls;
 }
 
 function ticketSubLabel(s) {
@@ -92,22 +104,31 @@ function ticketSubLabel(s) {
 
 function ticketMetaHint(s, st) {
   if (!st.on) return "勾选后计入";
+  if (s.kind === "checkin") return `已签到 ${st.value} 天 · 剩余 ${s.totalDays - st.value} 天`;
+  if (s.kind === "pulls") return `消耗 ${(st.value * s.diamondsPerPull).toLocaleString("zh-CN")} 钻石`;
   if (ticketAtCap(s, st.value)) {
     return `<span class="hint-cap">已达上限</span>（按 ${s.maxPulls} 抽计）`;
   }
   return `${s.ticketRatio} 券 = 1 抽`;
 }
 
+function inputPullsLabel(s, st) {
+  if (!st.on) return "未启用";
+  const pulls = ticketEffectivePulls(s, st.value);
+  if (s.kind === "checkin") return pulls ? `还可领 ${pulls} 抽` : "已全部领取";
+  return pulls ? `+${pulls} 抽` : "未计入";
+}
+
 function sourcePulls(s) {
   const st = state[s.id];
   if (!st.on) return 0;
-  if (isTicketSource(s)) return ticketEffectivePulls(s, st.value);
+  if (isInputSource(s)) return ticketEffectivePulls(s, st.value);
   return s.pulls * st.value;
 }
 
 function sourceCost(s) {
   const st = state[s.id];
-  if (!st.on || isTicketSource(s)) return 0;
+  if (!st.on || isInputSource(s)) return 0;
   return s.cost * st.value;
 }
 
@@ -116,20 +137,23 @@ function setEnabled(id, on) {
   const st = state[id];
   st.on = !!on;
   // 勾选可调次数礼包时若次数为 0，默认给 1 次，方便直接计入
-  if (st.on && !isTicketSource(src) && isQtySource(src) && st.value < 1) st.value = 1;
+  if (st.on && !isInputSource(src) && isQtySource(src) && st.value < 1) st.value = 1;
   render();
 }
 
 function setCount(id, next) {
   const src = SOURCES.find((s) => s.id === id);
-  const n = normalizeCount(next);
-  state[id].value = hasPurchaseLimit(src) ? Math.min(src.max, n) : n;
+  state[id].value = normalizeSourceCount(src, next);
   render();
 }
 
 function setTicketCount(id, raw) {
   const s = SOURCES.find((x) => x.id === id);
-  state[id].value = normalizeCount(raw);
+  state[id].value = normalizeSourceCount(s, raw);
+  if (state[id].value !== Number(raw)) {
+    const input = elSources.querySelector(`[data-ticket-input][data-id="${id}"]`);
+    if (input) input.value = state[id].value;
+  }
   // 输入时不全量重绘，避免光标丢失
   savePlan();
   updateTicketRow(s);
@@ -138,13 +162,12 @@ function setTicketCount(id, raw) {
 
 function updateTicketRow(s) {
   const st = state[s.id];
-  const pulls = st.on ? ticketEffectivePulls(s, st.value) : 0;
   const row = elSources.querySelector(`[data-ticket-row="${s.id}"]`);
   if (!row) return;
   const pullsEl = row.querySelector("[data-ticket-pulls]");
   const hintEl = row.querySelector("[data-ticket-hint]");
   if (pullsEl) {
-    pullsEl.textContent = !st.on ? "未启用" : pulls ? `+${pulls} 抽` : "未计入";
+    pullsEl.textContent = inputPullsLabel(s, st);
   }
   if (hintEl) hintEl.innerHTML = ticketMetaHint(s, st);
 }
@@ -152,7 +175,7 @@ function updateTicketRow(s) {
 function renderTicketRow(s) {
   const st = state[s.id];
   const tickets = st.value;
-  const pulls = st.on ? ticketEffectivePulls(s, tickets) : 0;
+  const inputLabel = s.kind === "checkin" ? "已签到天数" : s.kind === "pulls" ? "兑换抽数" : "持有数量";
 
   return `
     <div class="row ssr-row ${st.on ? "" : "is-off"}" data-ticket-row="${s.id}">
@@ -162,7 +185,7 @@ function renderTicketRow(s) {
         <span>${ticketSubLabel(s)}</span>
       </label>
       <div class="meta">
-        <b data-ticket-pulls>${!st.on ? "未启用" : pulls ? `+${pulls} 抽` : "未计入"}</b>
+        <b data-ticket-pulls>${inputPullsLabel(s, st)}</b>
         <span data-ticket-hint>${ticketMetaHint(s, st)}</span>
       </div>
       <input
@@ -170,12 +193,14 @@ function renderTicketRow(s) {
         type="number"
         min="0"
         step="1"
+        ${s.kind === "pulls" ? `max="${s.maxPulls}"` : ""}
+        ${s.kind === "checkin" ? `max="${s.totalDays}"` : ""}
         inputmode="numeric"
         data-ticket-input
         data-id="${s.id}"
-        value="${tickets || ""}"
-        placeholder="持有数量"
-        aria-label="${s.name}数量"
+        value="${tickets || (s.kind === "checkin" ? "0" : "")}"
+        placeholder="${inputLabel}"
+        aria-label="${s.name}${inputLabel}"
       />
     </div>
   `;
@@ -187,7 +212,7 @@ function renderSources() {
 
   const block = (title, list) => {
     const rows = list.map((s) => {
-      if (isTicketSource(s)) return renderTicketRow(s);
+      if (isInputSource(s)) return renderTicketRow(s);
 
       const st = state[s.id];
       const count = st.value;
@@ -231,7 +256,7 @@ function renderSources() {
 }
 
 function calc() {
-  let pulls = 0;
+  let pulls = alreadyPulls;
   let cost = 0;
   for (const s of SOURCES) {
     pulls += sourcePulls(s);
@@ -244,7 +269,8 @@ function renderSummary() {
   const { pulls, cost } = calc();
   elTotalPulls.textContent = pulls.toLocaleString("zh-CN");
   elTotalCost.textContent = money(cost);
-  elUnitPrice.textContent = unitPriceText(cost, pulls);
+  elUnitPrice.textContent = unitPriceText(cost, pulls - alreadyPulls);
+  document.getElementById("pulls-breakdown").textContent = `已抽 ${alreadyPulls.toLocaleString("zh-CN")} + 计划 ${(pulls - alreadyPulls).toLocaleString("zh-CN")}`;
   document.getElementById("mobile-pulls").textContent = pulls.toLocaleString("zh-CN");
   document.getElementById("mobile-cost").textContent = money(cost);
 
@@ -294,6 +320,13 @@ function render() {
   }
 }
 
+elAlreadyPulls.addEventListener("input", () => {
+  alreadyPulls = normalizeCount(elAlreadyPulls.value);
+  if (alreadyPulls !== Number(elAlreadyPulls.value)) elAlreadyPulls.value = alreadyPulls;
+  savePlan();
+  renderSummary();
+});
+
 elSources.addEventListener("change", (e) => {
   const t = e.target;
   if (t.matches("input[data-enable]")) {
@@ -317,7 +350,7 @@ elSources.addEventListener("click", (e) => {
 });
 
 function freeToggleSources() {
-  return SOURCES.filter((s) => s.group === "free" && !isTicketSource(s));
+  return SOURCES.filter((s) => s.group === "free" && !isInputSource(s));
 }
 
 document.getElementById("btn-all-free").addEventListener("click", () => {
@@ -336,9 +369,11 @@ document.getElementById("btn-clear-paid").addEventListener("click", () => {
 });
 
 document.getElementById("btn-reset").addEventListener("click", () => {
+  alreadyPulls = 0;
+  elAlreadyPulls.value = "";
   SOURCES.forEach((s) => {
     state[s.id].on = false;
-    state[s.id].value = isTicketSource(s) ? 0 : 1;
+    state[s.id].value = s.defaultValue ?? (isInputSource(s) ? 0 : 1);
   });
   render();
 });
@@ -362,7 +397,7 @@ function renderCultivateRewards() {
 function renderShopRewards(pulls) {
   document.getElementById("shop-rewards").innerHTML = SHOP_REWARDS.map((r) => {
     const hit = pulls >= r.pulls;
-    return `<tr class="${hit ? "hit" : ""}">
+    return `<tr class="${hit ? "hit" : ""}"${r.reward === "专武" ? " data-weapon-reward" : ""}>
       <td class="shop-pulls">${r.pulls}抽</td>
       <td>${r.reward}</td>
       <td class="shop-status"><span class="badge">${hit ? "已达成" : "未达成"}</span></td>
@@ -400,5 +435,6 @@ DEFAULT_ENABLED.forEach((id) => {
   if (state[id]) state[id].on = true;
 });
 restorePlan();
+elAlreadyPulls.value = alreadyPulls || "";
 renderCultivateRewards();
 render();
