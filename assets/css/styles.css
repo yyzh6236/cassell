@@ -358,6 +358,24 @@
       line-height: 1.5;
     }
 
+    .reward-tabs {
+      display: flex;
+      gap: 8px;
+      padding: 12px 14px;
+    }
+
+    .reward-tabs [aria-selected="true"] {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .reward-tabs button:focus-visible,
+    .ref-panel [role="tabpanel"]:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: -2px;
+    }
+
     .ref-table {
       width: 100%;
       border-collapse: collapse;
@@ -399,6 +417,16 @@
       color: var(--muted);
       font-weight: 700;
     }
+
+    .shop-table td { line-height: 1.6; overflow-wrap: anywhere; }
+    .shop-table .shop-pulls {
+      width: 64px;
+      white-space: nowrap;
+      font-family: "IBM Plex Mono", monospace;
+    }
+    .shop-table .shop-status { width: 80px; text-align: right; }
+    .shop-table tr.hit { background: var(--accent-soft); }
+    .shop-table tr.hit .badge { background: var(--accent); color: #fff; }
 
     .ref-table tr:hover td {
       background: rgba(15, 118, 110, 0.04);

@@ -2,8 +2,9 @@
  * ===== 可维护配置 =====
  * SOURCES: 抽数来源。max = 限购次数（免费途径为 1；null = 不限购）
  * tickets: kind="tickets"，填券数；ticketRatio 张券 = 1 抽；maxPulls 可选上限
- * MILESTONES: 累计抽数奖励表，后续直接追加
+ * MILESTONES: 开头单独展示的重要奖励（专武）
  * CULTIVATE_REWARDS: 培养星级奖励参考表（不参与抽数合计）
+ * SHOP_REWARDS: 累抽商店奖励表（按方案抽数显示达成状态，不参与抽数合计）
  */
 const SOURCES = [
   { id: "diamond", name: "25000钻石兑换", cost: 0, pulls: 50, max: 1, group: "free" },
@@ -50,15 +51,23 @@ const DEFAULT_ENABLED = [
 
 const MILESTONES = [
   { pulls: 600, reward: "专武" },
-  // 后续补充示例：
-  // { pulls: 800, reward: "某某奖励" },
 ];
 
 // 按星级对齐：觉醒 / 超限并排；未知填 null → 显示「？」
 const CULTIVATE_REWARDS = [
   { level: 1, awaken: "觉醒石 ×1", transcend: "超限石 ×3" },
-  { level: 2, awaken: "UR券 ×20", transcend: null },
+  { level: 2, awaken: "UR券 ×20", transcend: "超限石 ×4" },
   { level: 3, awaken: "UR券 ×30", transcend: "UR券 ×40" },
-  { level: 4, awaken: "觉醒石 ×5", transcend: null },
-  { level: 5, awaken: "皮肤", transcend: null },
+  { level: 4, awaken: "觉醒石 ×5", transcend: "SSR全基础龙文任选" },
+  { level: 5, awaken: "皮肤", transcend: "SSR全光暗龙文任选" },
+];
+
+const SHOP_REWARDS = [
+  { pulls: 200, reward: "SSR全基础龙文任选 ×1" },
+  { pulls: 300, reward: "超限石 ×3" },
+  { pulls: 400, reward: "橙色核心任选 ×1" },
+  { pulls: 500, reward: "超限石 ×4" },
+  { pulls: 600, reward: "专武" },
+  { pulls: 650, reward: "超限石 ×5" },
+  { pulls: 700, reward: "SSR全基础龙文任选 ×1 + SSR全光暗龙文任选" },
 ];

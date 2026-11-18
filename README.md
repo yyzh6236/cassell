@@ -40,8 +40,9 @@ python3 -m http.server 8080
 |------|------|
 | `SOURCES` | 抽数来源（免费 / 礼包 / 券输入） |
 | `DEFAULT_ENABLED` | 打开页面时默认勾选的来源 id |
-| `MILESTONES` | 累计抽数奖励（如 600 抽专武） |
+| `MILESTONES` | 开头单独展示的重要奖励（600 抽专武） |
 | `CULTIVATE_REWARDS` | 培养星级奖励参考表（不参与合计） |
+| `SHOP_REWARDS` | 累抽商店奖励，与养成奖励通过标签切换，按方案抽数显示达成状态 |
 
 礼包 `max`：
 
@@ -56,3 +57,5 @@ python3 -m http.server 8080
 ## 技术说明
 
 纯前端静态页，无构建步骤；字体通过 Google Fonts CDN 加载。
+
+奖励与标签切换检查：`node tests/rewards.test.js`（使用 Node.js 内置模块，无需安装依赖）。

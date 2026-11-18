@@ -267,10 +267,11 @@ function renderSummary() {
   if (!sorted.length) {
     elGapNote.textContent = "暂无累计奖励信息。";
   } else if (!next) {
-    elGapNote.innerHTML = `当前方案已覆盖全部累计奖励（最高 <b>${sorted[sorted.length - 1].pulls}</b> 抽）。`;
+    elGapNote.textContent = "当前方案已达成专武奖励。";
   } else {
     elGapNote.innerHTML = `距离下一档「${next.reward}」还差 <b>${next.pulls - pulls}</b> 抽。`;
   }
+  renderShopRewards(pulls);
 }
 
 function render() {
@@ -357,6 +358,43 @@ function renderCultivateRewards() {
     </tr>`
   ).join("");
 }
+
+function renderShopRewards(pulls) {
+  document.getElementById("shop-rewards").innerHTML = SHOP_REWARDS.map((r) => {
+    const hit = pulls >= r.pulls;
+    return `<tr class="${hit ? "hit" : ""}">
+      <td class="shop-pulls">${r.pulls}抽</td>
+      <td>${r.reward}</td>
+      <td class="shop-status"><span class="badge">${hit ? "已达成" : "未达成"}</span></td>
+    </tr>`;
+  }).join("");
+}
+
+const rewardTabs = [...document.querySelectorAll('#reward-tabs [role="tab"]')];
+
+function selectRewardTab(selected) {
+  rewardTabs.forEach((tab) => {
+    const active = tab === selected;
+    tab.setAttribute("aria-selected", String(active));
+    tab.tabIndex = active ? 0 : -1;
+    document.getElementById(tab.getAttribute("aria-controls")).hidden = !active;
+  });
+}
+
+document.getElementById("reward-tabs").addEventListener("click", (e) => {
+  const tab = e.target.closest('[role="tab"]');
+  if (tab) selectRewardTab(tab);
+});
+
+document.getElementById("reward-tabs").addEventListener("keydown", (e) => {
+  const index = rewardTabs.indexOf(e.target);
+  if (index < 0 || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
+  e.preventDefault();
+  const next = e.key === "Home" ? 0 : e.key === "End" ? rewardTabs.length - 1
+    : (index + (e.key === "ArrowRight" ? 1 : -1) + rewardTabs.length) % rewardTabs.length;
+  selectRewardTab(rewardTabs[next]);
+  rewardTabs[next].focus();
+});
 
 DEFAULT_ENABLED.forEach((id) => {
   if (state[id]) state[id].on = true;
