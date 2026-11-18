@@ -487,3 +487,164 @@
   .mobile-summary strong { color: var(--accent); font-size: 22px; }
   .mobile-details { color: var(--accent); font-size: 12px; }
 }
+
+.mobile-summary[hidden] { display: none; }
+
+.calculator-tabs {
+  display: flex;
+  gap: 4px;
+  width: fit-content;
+  margin-bottom: 24px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--bg-deep);
+}
+
+.calculator-tabs button {
+  min-height: 44px;
+  padding: 8px 18px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  font-size: 14px;
+}
+
+.calculator-tabs [aria-selected="true"] {
+  border-color: var(--line);
+  background: #fffdf8;
+  color: var(--accent);
+  box-shadow: 0 2px 5px #1c243014;
+}
+
+.calculator-tabs button:focus-visible,
+#calculator-growth :is(input, select):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.growth-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 18px;
+}
+
+.growth-form, .growth-result { padding: 18px; }
+.growth-levels, .growth-inventory { display: grid; gap: 10px; }
+.growth-levels { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: end; }
+.growth-inventory { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 16px; }
+.level-arrow { align-self: end; padding-bottom: 12px; color: var(--muted); }
+
+.growth-form label {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 6px;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.growth-form :is(select, input) {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+}
+
+.growth-help, .growth-roadmap-help {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.growth-help { margin: 16px 0 0; }
+.growth-roadmap-help { margin: 14px 18px 0; }
+.growth-roadmap-panel { margin-top: 18px; }
+.growth-result, .growth-milestone-materials { display: grid; gap: 12px; }
+
+.growth-material { display: grid; gap: 5px; min-width: 0; }
+.growth-material-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 8px;
+  font-size: 13px;
+}
+.growth-material-line b { color: var(--ok); }
+.growth-material-line .growth-gap { color: var(--warn); }
+.growth-material small { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+
+.growth-material progress {
+  display: block;
+  width: 100%;
+  height: 8px;
+  appearance: none;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  background: var(--bg-deep);
+  color: var(--accent);
+}
+.growth-material progress::-webkit-progress-bar { background: var(--bg-deep); }
+.growth-material progress::-webkit-progress-value { background: var(--accent); border-radius: 999px; }
+.growth-material progress::-moz-progress-bar { background: var(--accent); border-radius: 999px; }
+
+.growth-outcome {
+  margin: 0 18px 18px;
+  padding: 11px 13px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.growth-roadmap {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 16px 18px 18px;
+  list-style: none;
+}
+.growth-milestone {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fffdf8;
+}
+.growth-milestone.is-target { border-color: var(--accent); background: #f1faf7; }
+.growth-milestone-head { display: flex; align-items: center; gap: 8px; }
+.growth-milestone-head h3 { margin: 0; font-size: 1rem; }
+.growth-milestone.is-target .badge { background: var(--accent-soft); color: var(--accent); }
+.growth-milestone-visits {
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.growth-complete { grid-column: 1 / -1; color: var(--muted); font-size: 14px; }
+
+@media (max-width: 900px) {
+  .growth-roadmap { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 600px) {
+  .calculator-tabs { width: 100%; }
+  .calculator-tabs button { flex: 1; }
+  .growth-layout, .growth-roadmap { grid-template-columns: minmax(0, 1fr); }
+  .growth-form, .growth-result { padding: 14px; }
+  .growth-inventory { gap: 8px; }
+}

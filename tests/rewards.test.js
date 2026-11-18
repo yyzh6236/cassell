@@ -23,13 +23,15 @@ const document = {
     return tabs;
   },
 };
-const tabs = [...html.matchAll(/<button[^>]+role="tab"[^>]*>/g)].map(([tag]) => {
+const readTabs = (markup) => [...markup.matchAll(/<button[^>]+role="tab"[^>]*>/g)].map(([tag]) => {
   const el = document.getElementById(tag.match(/id="([^"]+)"/)[1]);
   for (const [, name, value] of tag.matchAll(/([\w-]+)="([^"]*)"/g)) el.setAttribute(name, value);
   el.tabIndex = Number(el.getAttribute("tabindex") || 0);
   document.getElementById(el.getAttribute("aria-controls")).hidden = el.getAttribute("aria-selected") !== "true";
   return el;
 });
+const tabs = readTabs(html.split('id="reward-tabs"')[1].split("</div>")[0]);
+const calculatorTabs = readTabs(html.split('id="calculator-tabs"')[1].split("</div>")[0]);
 const storage = new Map();
 const context = vm.createContext({ document, localStorage: {
   getItem(key) { return storage.get(key) || null; }, setItem(key, value) { storage.set(key, value); },
@@ -172,3 +174,79 @@ assert.equal(JSON.parse(storage.get("cassell.plan.v1")).alreadyPulls, 0);
 assert.equal(historyEnabled.checked, false);
 assert.equal(JSON.parse(storage.get("cassell.plan.v1")).alreadyPullsEnabled, false);
 console.log("通过：奖励及专武高亮、标签切换、已抽进度、签到剩余抽数、钻石兑换、自动保存与旧方案兼容。");
+
+
+for (const file of ["cultivation-config.js", "cultivation.js"]) {
+  assert.ok(html.includes(`src="assets/js/${file}"`));
+  run(read(`assets/js/${file}`));
+}
+
+const el = (id) => document.getElementById(id);
+const setGrowth = (id, value, type = "change") => {
+  el(`growth-${id}`).value = String(value);
+  el(`growth-${id}`).listeners[type]();
+};
+const calcBefore = run("JSON.stringify(calc())");
+calculatorTabs[1].listeners.click();
+assert.equal(el("calculator-pulls").hidden, true);
+assert.equal(el("mobile-summary").hidden, true);
+assert.equal(el("calculator-growth").hidden, false);
+assert.equal(el("growth-route").textContent, "觉0 → 超5");
+assert.match(el("growth-result").innerHTML, /缺 3,300/);
+
+setGrowth("current", 4);
+setGrowth("target", 6);
+setGrowth("shards", 684, "input");
+setGrowth("awakening", 1, "input");
+setGrowth("transcend", 2, "input");
+assert.equal(el("growth-route").textContent, "觉4 → 超1");
+assert.match(el("growth-result").innerHTML, /缺 16/);
+assert.match(el("growth-result").innerHTML, /缺 3/);
+assert.match(el("growth-result").innerHTML, /缺 1/);
+assert.match(el("growth-result").innerHTML, /value="684" max="700"/);
+assert.equal(el("growth-outcome").textContent, "碎片拜访 4 次（2 天，最后一天 1 次）。");
+assert.match(el("growth-roadmap").innerHTML, /觉5[\s\S]*?无需拜访/);
+assert.match(el("growth-roadmap").innerHTML, /class="growth-milestone is-target"[\s\S]*?<h3>超1<\/h3>/);
+assert.match(el("growth-roadmap").innerHTML, /<h3>超5<\/h3>/);
+
+for (const [shards, expected] of [
+  [694, "碎片拜访 2 次（1 天）。"],
+  [695, "碎片拜访 1 次（1 天）。"],
+  [685, "碎片拜访 3 次（1 天）。"],
+  [700, "无需拜访。"],
+]) {
+  setGrowth("shards", shards, "input");
+  assert.equal(el("growth-outcome").textContent, expected);
+}
+setGrowth("awakening", 4, "input");
+setGrowth("transcend", 3, "input");
+assert.equal(el("growth-outcome").textContent, "材料已备齐，无需拜访。");
+
+calculatorTabs[1].listeners.keydown({ key: "ArrowLeft", preventDefault() {} });
+assert.equal(el("calculator-pulls").hidden, false);
+assert.equal(el("mobile-summary").hidden, false);
+assert.equal(el("calculator-growth").hidden, true);
+assert.equal(document.activeElement, calculatorTabs[0]);
+assert.equal(run("JSON.stringify(calc())"), calcBefore);
+calculatorTabs[1].listeners.click();
+assert.equal(el("growth-shards").value, "700");
+const cultivationKey = "cassell.cultivation.v1";
+const savedGrowth = storage.get(cultivationKey);
+assert.deepEqual(JSON.parse(savedGrowth), {
+  current: 4, target: 6, inventory: { shards: 700, awakeningStones: 4, transcendStones: 3 },
+});
+click("btn-reset");
+assert.equal(storage.get(cultivationKey), savedGrowth);
+for (const id of ["current", "target", "shards", "awakening", "transcend"]) el(`growth-${id}`).value = "";
+run(read("assets/js/cultivation.js"));
+assert.equal(el("growth-route").textContent, "觉4 → 超1");
+assert.deepEqual(["shards", "awakening", "transcend"].map(id => el(`growth-${id}`).value), ["700", "4", "3"]);
+assert.equal(el("growth-outcome").textContent, "材料已备齐，无需拜访。");
+setGrowth("shards", "", "input");
+assert.equal(JSON.parse(storage.get(cultivationKey)).inventory.shards, null);
+setGrowth("current", 10);
+assert.equal(el("growth-target").value, "10");
+assert.equal(el("growth-route").textContent, "超5 → 超5");
+assert.equal(el("growth-outcome").textContent, "当前已是目标等级。");
+assert.match(el("growth-roadmap").innerHTML, /最高等级/);
+console.log("通过：计算器切换、跨觉醒与超限的累计缺口、后续等级进度、拜访次数与天数、最高等级、养成输入独立保存与恢复。");
